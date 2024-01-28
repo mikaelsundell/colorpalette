@@ -347,7 +347,7 @@ main( int argc, const char * argv[])
                            << " rgb: " << color[0] * 255 << ", " << color[1] * 255 << ", " << color[2] * 255
                            << " xy: " << pixelx << ", " << pixely;
 
-                    print_info("Pixel: ", stream.str());
+                    print_info("Color: ", stream.str());
                 }
                 
                 // write output image
