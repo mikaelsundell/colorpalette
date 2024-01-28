@@ -6,7 +6,7 @@ Readme for colorpalette
 Introduction
 ------------
 
-colorpalette is a tool to process and create palettes of unique colors from images
+Colorpalette is a tool to process and create palettes of unique colors from images
 
 ![Sample image or figure.](images/image.png 'logctool')
 
@@ -69,7 +69,7 @@ Packaging
 The `macdeploy.sh` script will deploy mac bundle to dmg including dependencies.
 
 ```shell
-./macdeploy.sh -e <path>/logctool -d <path> -p <path>
+./macdeploy.sh -e <path>/colorpalette -d <path> -p <path>
 ```
 
 Dependencies
