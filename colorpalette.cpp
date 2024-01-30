@@ -4,11 +4,8 @@
 //
 
 #include <iostream>
-#include <fstream>
 #include <vector>
-#include <cmath>
-#include <regex>
-#include <variant>
+#include <random>
 
 // openimageio
 #include <OpenImageIO/imageio.h>
@@ -110,6 +107,52 @@ static void
 print_help(ArgParse& ap)
 {
     ap.print_help();
+}
+
+// utils - colors
+float bgr_from_hsv(const cv::Vec3f& color)
+{
+    cv::Mat bgr(1, 1, CV_32FC3, color);
+    cv::Mat hsv;
+    cv::cvtColor(bgr, hsv, cv::COLOR_BGR2HSV);
+    cv::Vec3f hsvcolor = hsv.at<cv::Vec3f>(0, 0);
+    return hsvcolor[0];
+}
+
+// colorset
+struct Colorset
+{
+    cv::Vec3f color;
+    cv::Vec2f pixel;
+    float hue;
+    Colorset(const cv::Vec3f& c, const cv::Vec2f& p, float h)
+    : color(c), pixel(p), hue(h) {}
+};
+
+void renderBoxByColorset(ImageBuf& imagebuf, const Colorset& colorset, int box, int width)
+{
+    int xbegin = static_cast<int>(colorset.pixel[0]) - box / 2 - width;
+    int xend = xbegin + box + 2 * width;
+    int ybegin = static_cast<int>(colorset.pixel[1]) - box / 2 - width;
+    int yend = ybegin + box + 2 * width;
+
+    float white[3] = {1.0, 1.0, 1.0};
+    float color[3] = {
+        colorset.color[0],
+        colorset.color[1],
+        colorset.color[2]
+    };
+    
+    ROI outer(xbegin, xend, ybegin, yend, 0, 1, 0, 3);
+    ImageBufAlgo::fill(imagebuf, white, outer);
+
+    int inner_xbegin = xbegin + width;
+    int inner_xend = xend - width;
+    int inner_ybegin = ybegin + width;
+    int inner_yend = yend - width;
+
+    ROI inner(inner_xbegin, inner_xend, inner_ybegin, inner_yend, 0, 1, 0, 3);
+    ImageBufAlgo::fill(imagebuf, color, inner);
 }
 
 // main
@@ -282,7 +325,7 @@ main( int argc, const char * argv[])
                         break;
                     }
                 }
-
+                
                 // Create a matrix for the selected diverse centers.
                 cv::Mat diversecenters(selectedindices.size(), centers.cols, centers.type());
                 int idx = 0;
@@ -294,7 +337,7 @@ main( int argc, const char * argv[])
                 // This step alters the original serialized image data to reflect the reduced color palette.
                 for (int i = 0; i < labels.size(); ++i) {
                     int clusterIndex = std::distance(selectedindices.begin(), selectedindices.find(labels[i]));
-                    for (int j = 0; j < 3; ++j) { // Assuming 3 channels
+                    for (int j = 0; j < 3; ++j) { // assuming 3 channels
                         serialized.at<float>(i * 3 + j) = diversecenters.at<float>(clusterIndex, j);
                     }
                 }
@@ -315,70 +358,91 @@ main( int argc, const char * argv[])
                 }
                     
                 print_info("Writing color and pixel values for color palette");
-                std::vector<cv::Vec3f> colors;
-                std::vector<cv::Vec2f> pixels;
-                for(int i = 0; i < diversecenters.rows; ++i)
-                {
-                    cv::Vec3f color = diversecenters.at<cv::Vec3f>(i);
-                    colors.push_back(color);
-
-                    // find an example (x, y) coordinate for this color
-                    int label = std::distance(selectedindices.begin(), selectedindices.find(i));
-                    int pixelindex = -1;
-                    for (int labelindex = 0; labelindex < labels.size(); ++labelindex) {
-                        if (labels[labelindex] == label) {
-                            pixelindex = labelindex;
-                            break;
-                        }
-                    }
-
-                    // convert the serialized index back to (x, y) coordinates
-                    int pixelx = -1, pixely = -1;
-                    if (pixelindex != -1) {
-                        pixelx = pixelindex % width;
-                        pixely = pixelindex / width;
-                    }
-                    pixels.push_back(cv::Vec2f(pixelx, pixely));
-                    
-                    // print colors
-                    std::ostringstream stream;
-                    stream << i + 1
-                           << ": "
-                           << " rgb: " << color[0] * 255 << ", " << color[1] * 255 << ", " << color[2] * 255
-                           << " xy: " << pixelx << ", " << pixely;
-
-                    print_info("Color: ", stream.str());
+                std::vector<Colorset> colorsets;
+                const int seed = 101010; // ultimate question of life in binary
+                std::mt19937 gen(seed);
+                
+                // Convert to hue and get pixel (x, y) coordinates
+                std::unordered_map<int, std::vector<int>> indicesmap;
+                for (int i = 0; i < labels.size(); ++i) {
+                    indicesmap[labels[i]].push_back(i);
                 }
+                
+                for (int i = 0; i < diversecenters.rows; ++i) {
+                    cv::Vec3f center = diversecenters.at<cv::Vec3f>(i);
+                    float hue = bgr_from_hsv(center);
+
+                    auto it = std::next(selectedindices.begin(), i);
+                    if (it != selectedindices.end()) {
+                        int originallabel = *it;
+                        std::vector<int> &indices = indicesmap[originallabel];
+
+                        // randomly select an index from the vector for this label
+                        std::uniform_int_distribution<> dis(0, indices.size() - 1);
+                        int pixelindex = indices[dis(gen)];
+                        int pixelx = pixelindex % width;
+                        int pixely = pixelindex / width;
+
+                        colorsets.emplace_back(center, cv::Vec2f(pixelx, pixely), hue);
+                    }
+                }
+                
+                std::sort(colorsets.begin(), colorsets.end(), [](const Colorset& a, const Colorset& b) {
+                    return a.hue < b.hue;
+                });
                 
                 // write output image
                 print_info("Writing output image with color palette: ", tool.outputfile);
                 {
                     int height = 100;
-                    int box = imagebuf.spec().width / colors.size();
+                    int box = imagebuf.spec().width / colorsets.size();
 
-                    OIIO::ImageSpec spec(
+                    ImageSpec spec(
                         imagebuf.spec().width,
                         imagebuf.spec().height + height,
                         3,
-                        OIIO::TypeDesc::FLOAT
+                        TypeDesc::FLOAT
                     );
-                    OIIO::ImageBuf newImage(spec);
+                    ImageBuf copybuf(spec);
 
-                    // copy the original image to the newImage
-                    OIIO::ImageBufAlgo::paste(newImage, 0, 0, 0, 0, imagebuf);
+                    // copy the original image to imagebuf
+                    ImageBufAlgo::paste(copybuf, 0, 0, 0, 0, imagebuf);
 
                     // fill in the color boxes
-                    for (size_t i = 0; i < colors.size(); ++i)
-                    {
-                        float color[3] = { colors[i][0], colors[i][1], colors[i][2] }; // Convert from BGR to RGB if necessary
-                        OIIO::ROI roi(
-                            i * box, (i + 1) * box,
-                            imagebuf.spec().height,
-                            imagebuf.spec().height + height
-                        );
-                        OIIO::ImageBufAlgo::fill(newImage, color, roi);
+                    for (int i = 0; i < colorsets.size(); ++i) {
+                        const auto& colorset = colorsets[i];
+                        std::ostringstream stream;
+                        stream << i + 1
+                               << ": "
+                               << " rgb: " << colorset.color[0] * 255 << ", " << colorset.color[1] * 255 << ", " << colorset.color[2] * 255
+                               << " xy: " << colorset.pixel[0] << ", " << colorset.pixel[1];
+
+                        print_info("Color: ", stream.str());
+
+                        // render palette
+                        {
+                            float color[3] = {
+                                colorsets[i].color[0],
+                                colorsets[i].color[1],
+                                colorsets[i].color[2]
+                            };
+                            ROI roi(
+                                i * box, (i + 1) * box,
+                                imagebuf.spec().height,
+                                imagebuf.spec().height + height
+                            );
+                            ImageBufAlgo::fill(copybuf, color, roi);
+                        }
+                        
+                        // render boxes
+                        {
+                            int size = 40;
+                            int border = 1;
+                            float white[3] = {1.0, 1.0, 1.0};
+                            renderBoxByColorset(copybuf, colorsets[i], size, border);
+                        }
                     }
-                    imagebuf.copy(newImage);
+                    imagebuf.copy(copybuf);
                     
                     if (!imagebuf.write(tool.outputfile)) {
                         print_error("could not write output file", imagebuf.geterror());
