@@ -22,3 +22,7 @@ target_link_libraries(${project_name}
         opencv_imgproc
         opencv_imgcodecs
 )
+
+install(TARGETS ${project_name}
+    RUNTIME DESTINATION bin
+)
