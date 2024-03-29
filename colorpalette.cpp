@@ -284,7 +284,7 @@ main( int argc, const char * argv[])
                 // Perform k-Means clustering
                 // k-means is applied to find 'k' clusters within the color space of the image.
                 // 'k' is predefined, aiming for a broad initial capture of the image's color diversity.
-                int k = 20;
+                int k = tool.colors;
                 std::vector<int> labels;
                 cv::Mat centers;
                 cv::kmeans(serialized, k, labels, cv::TermCriteria(cv::TermCriteria::MAX_ITER + cv::TermCriteria::EPS, 10, 1.0), 3, cv::KMEANS_PP_CENTERS, centers);
