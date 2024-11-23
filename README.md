@@ -66,7 +66,7 @@ Generate a color palette from an image
 Download
 ---------
 
-Brawtool is included as part of pipeline tools. You can download it from the releases page:
+Colorpalette is included as part of pipeline tools. You can download it from the releases page:
 
 * https://github.com/mikaelsundell/pipeline/releases
 
