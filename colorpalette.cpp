@@ -278,7 +278,7 @@ main( int argc, const char * argv[])
                 // Prepare the image data for k-means clustering
                 // The image is reshaped into a 2D matrix where each row represents a pixel and each column represents a color channel.
                 // This serialization flattens the image into a single row for processing with k-means.
-                cv::Mat serialized = image.reshape(1, image.total());
+                cv::Mat serialized = image.reshape(1, static_cast<int>(image.total()));
                 serialized.convertTo(serialized, CV_32F);
 
                 // Perform k-Means clustering
@@ -327,7 +327,7 @@ main( int argc, const char * argv[])
                 }
                 
                 // Create a matrix for the selected diverse centers.
-                cv::Mat diversecenters(selectedindices.size(), centers.cols, centers.type());
+                cv::Mat diversecenters(static_cast<int>(selectedindices.size()), centers.cols, centers.type());
                 int idx = 0;
                 for (int selectedIndex : selectedindices) {
                     centers.row(selectedIndex).copyTo(diversecenters.row(idx++));
@@ -336,7 +336,7 @@ main( int argc, const char * argv[])
                 // Reassign each pixel in the image to the color of the closest diverse center.
                 // This step alters the original serialized image data to reflect the reduced color palette.
                 for (int i = 0; i < labels.size(); ++i) {
-                    int clusterIndex = std::distance(selectedindices.begin(), selectedindices.find(labels[i]));
+                    int clusterIndex = static_cast<int>(std::distance(selectedindices.begin(), selectedindices.find(labels[i])));
                     for (int j = 0; j < 3; ++j) { // assuming 3 channels
                         serialized.at<float>(i * 3 + j) = diversecenters.at<float>(clusterIndex, j);
                     }
@@ -378,7 +378,7 @@ main( int argc, const char * argv[])
                         std::vector<int> &indices = indicesmap[originallabel];
 
                         // randomly select an index from the vector for this label
-                        std::uniform_int_distribution<> dis(0, indices.size() - 1);
+                        std::uniform_int_distribution<> dis(0, static_cast<int>(indices.size()) - 1);
                         int pixelindex = indices[dis(gen)];
                         int pixelx = pixelindex % width;
                         int pixely = pixelindex / width;
