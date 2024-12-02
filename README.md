@@ -6,7 +6,7 @@ Colorpalette
 Introduction
 ------------
 
-Colorpalette is a tool to process and create palettes of unique colors from images
+Colorpalette is a tool to process and create palettes of unique colors from images.
 
 ![Sample image or figure.](images/image.png 'colorpalette')
 
