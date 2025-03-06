@@ -251,7 +251,7 @@ main( int argc, const char * argv[])
                 print_info("  height: ", height);
                 print_info("  channels: ", nchannels);
                 print_info("  metadata: ", "raw");
-                for (size_t i = 0; i < spec.extra_attribs.size(); ++i) {
+                for (int i = 0; i < spec.extra_attribs.size(); ++i) {
                     const ParamValue& attrib = spec.extra_attribs[i];
                     print_info(" name: ", attrib.name());
                     print_info("   type: ", attrib.type());
