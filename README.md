@@ -10,6 +10,12 @@ Colorpalette is a tool to process and create palettes of unique colors from imag
 
 ![Sample image or figure.](images/image.png 'colorpalette')
 
+Change log:
+
+| Date       | Description                             |
+|------------|-----------------------------------------|
+| 2024-01-24 | First import |
+
 Building
 --------
 
@@ -89,7 +95,22 @@ https://github.com/mikaelsundell/colorpalette
 https://github.com/mikaelsundell/colorpalette/issues
 
 
-Contributors
----------
+## License
 
-* ChatGPT :-)
+### Code
+This project’s source code is licensed under the BSD 3-Clause License.
+
+### Third-Party Dependencies
+
+- **OpenImageIO**  
+  © Contributors to the OpenImageIO project  
+  Licensed under the BSD 3-Clause License  
+  https://github.com/OpenImageIO/oiio
+
+- **OpenCV**  
+  © OpenCV contributors  
+  Licensed under the Apache License 2.0  
+  https://github.com/opencv/opencv
+
+### Note
+Users are responsible for complying with the licenses of third-party libraries when using or distributing this software.
